@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Edit2, Trash2, AlertTriangle, Download, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { Product, Department } from '../types';
 import { ProductModal } from './ProductModal';
 
@@ -43,6 +45,87 @@ export function ProductsTab({
     setEditingProduct(null);
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const exportToExcel = () => {
+    const exportData = products.map(product => ({
+      'Nom du produit': product.name,
+      'Description': product.description,
+      'Quantité disponible': product.stock,
+      'Prix unitaire (TND)': product.price.toFixed(2),
+      'Stock minimum': product.minStock,
+      'Stock maximum': product.maxStock,
+      'Statut': product.status
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Produits en Stock');
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    saveAs(data, `produits_stock_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Prendre la première feuille
+        const worksheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[worksheetName];
+        
+        // Convertir en JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+        
+        // Traiter chaque ligne et créer des produits
+        jsonData.forEach((row, index) => {
+          try {
+            const productData = {
+              name: row['Nom du produit'] || row['Nom'] || row['Product Name'] || `Produit ${index + 1}`,
+              description: row['Description'] || row['Desc'] || '',
+              stock: parseInt(row['Quantité disponible'] || row['Stock'] || row['Quantité'] || '0') || 0,
+              price: parseFloat(row['Prix unitaire (TND)'] || row['Prix'] || row['Price'] || '0') || 0,
+              minStock: parseInt(row['Stock minimum'] || row['Min'] || row['Min Stock'] || '5') || 5,
+              maxStock: parseInt(row['Stock maximum'] || row['Max'] || row['Max Stock'] || '100') || 100,
+              status: (row['Statut'] || 'Stock optimal') as 'Stock optimal' | 'Stock critique' | 'En commande'
+            };
+
+            // Valider que le nom du produit n'est pas vide
+            if (productData.name && productData.name.trim() !== '') {
+              onAddProduct(productData);
+            }
+          } catch (error) {
+            console.warn(`Erreur lors du traitement de la ligne ${index + 1}:`, error);
+          }
+        });
+
+        alert(`Import terminé! ${jsonData.length} produits traités.`);
+      } catch (error) {
+        console.error('Erreur lors de l\'import:', error);
+        alert('Erreur lors de l\'import du fichier Excel. Veuillez vérifier le format.');
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
+    
+    // Reset input
+    if (event.target) {
+      event.target.value = '';
+    }
+  };
+
   if (currentDepartment.id !== 'technique') {
     return null;
   }
@@ -54,12 +137,35 @@ export function ProductsTab({
         </div>
         <div className="flex space-x-3">
           <button
+            onClick={handleImportClick}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Importer Excel</span>
+          </button>
+          <button
+            onClick={exportToExcel}
+            className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>Exporter Excel</span>
+          </button>
+          <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Plus className="h-4 w-4" />
             <span>Nouveau Produit</span>
           </button>
+          
+          {/* Input file caché pour l'import */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileImport}
+            accept=".xlsx,.xls"
+            style={{ display: 'none' }}
+          />
         </div>
       </div>
       <div className="bg-white rounded-lg shadow-sm border border-gray-100">
