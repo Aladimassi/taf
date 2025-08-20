@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
+  <rect x="20" y="50" width="60" height="60" fill="#1e3a8a" rx="5"/>
+  <text x="50" y="90" fill="white" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle">T</text>
+  
+  <rect x="90" y="50" width="60" height="60" fill="#1e3a8a" rx="5"/>
+  <text x="120" y="90" fill="white" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle">A</text>
+  
+  <rect x="160" y="50" width="60" height="60" fill="#1e3a8a" rx="5"/>
+  <text x="190" y="90" fill="white" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle">V</text>
+  
+  <text x="150" y="140" fill="#1e3a8a" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle">Airports</text>
+  <text x="150" y="160" fill="#6b7280" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">A member of Groupe ADP</text>
+</svg>
